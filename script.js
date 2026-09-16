@@ -148,13 +148,8 @@ function setupFileField(container) {
   const removeBtn = container.querySelector(".file-remove-btn");
 
   let preview = null; // the .file-preview element, created on demand
-  let objectUrl = null;
 
   function clearPreview() {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
     if (preview) {
       preview.remove();
       preview = null;
@@ -168,11 +163,16 @@ function setupFileField(container) {
     preview.className = "file-preview";
 
     if (file.type.startsWith("image/")) {
-      objectUrl = URL.createObjectURL(file);
+      // Use a data URL instead of URL.createObjectURL(). Some production
+      // hosts send a CSP that blocks the blob: scheme, which prevents the
+      // image preview from loading. data: is already allowed by the site's
+      // image policy.
       const img = document.createElement("img");
-      img.src = objectUrl;
       img.alt = "";
       preview.appendChild(img);
+      const reader = new FileReader();
+      reader.onload = () => { img.src = reader.result; };
+      reader.readAsDataURL(file);
     } else {
       preview.innerHTML = `
         <div class="file-preview-doc">
