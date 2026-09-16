@@ -148,9 +148,8 @@ function setupFileField(container) {
   const removeBtn = container.querySelector(".file-remove-btn");
 
   let preview = null; // the .file-preview element, created on demand
-
-  function clearPreview() {
-    if (preview) {
+function clearPreview() {
+if (preview) {
       preview.remove();
       preview = null;
     }
@@ -163,15 +162,14 @@ function setupFileField(container) {
     preview.className = "file-preview";
 
     if (file.type.startsWith("image/")) {
-      // Use a data URL instead of URL.createObjectURL(). Some production
-      // hosts send a CSP that blocks the blob: scheme, which prevents the
-      // image preview from loading. data: is already allowed by the site's
-      // image policy.
       const img = document.createElement("img");
       img.alt = "";
       preview.appendChild(img);
+
       const reader = new FileReader();
-      reader.onload = () => { img.src = reader.result; };
+      reader.onload = () => {
+        img.src = reader.result;
+      };
       reader.readAsDataURL(file);
     } else {
       preview.innerHTML = `
@@ -186,7 +184,6 @@ function setupFileField(container) {
     container.classList.add("has-file");
     actions.hidden = false;
   }
-
   function reset() {
     clearPreview();
     container.classList.remove("has-file");
