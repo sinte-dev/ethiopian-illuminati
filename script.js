@@ -226,47 +226,13 @@ document.querySelectorAll(".file-field").forEach(setupFileField);
 initResume();
 initLastRegistrationBanner();
 
-/* ---------- fingerprint verify button ----------
-   Purely a client-side confirmation gesture — this is not a real biometric
-   check (the web platform has no API for reading an actual fingerprint
-   sensor outside WebAuthn, which is a different, credential-based flow).
-   Modeled on how an actual fingerprint sensor behaves: it requires a
-   deliberate, sustained press rather than a single tap, with a ring that
-   fills in as the "scan" progresses. Releasing early cancels it. It
-   doesn't currently gate submission.
+/* ---------- fingerprint press-and-hold verification ----------
+   This keeps the original visual fingerprint interaction: press and hold
+   until the progress completes. It is a client-side confirmation gesture,
+   not a real biometric fingerprint scan. Successful completion is required
+   before the registration form can be submitted. */
 
-   Pointer capture is used so the hold survives small finger movement on
-   touchscreens — without it, a slight drag during the press fires
-   pointerleave and silently cancels the scan, which is the "press and
-   hold isn't working" bug on mobile. */
-
-const FINGERPRINT_HOLD_MS = 1200;
-
-function playFingerprintTone(verified) {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new Ctx();
-    const notes = verified ? [660, 880] : [440];
-    let t = ctx.currentTime;
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.18);
-      t += 0.14;
-    });
-    setTimeout(() => ctx.close(), (notes.length * 140) + 200);
-  } catch {
-    // Web Audio unavailable (very old browser / blocked autoplay policy
-    // before any user gesture) — the visual state change still gives feedback.
-  }
-}
+let passkeyVerified = false;
 
 (function setupFingerprintButton() {
   const btn = document.getElementById("fingerprintBtn");
@@ -322,6 +288,7 @@ function playFingerprintTone(verified) {
     const verified = !btn.classList.contains("is-verified");
     cancelHold();
     btn.classList.toggle("is-verified", verified);
+    passkeyVerified = verified;
     btn.setAttribute("aria-pressed", verified ? "true" : "false");
     updateStatusText();
     playFingerprintTone(verified);
@@ -433,6 +400,13 @@ function showConfirmation(token) {
 }
 
 async function uploadFile(file, folder) {
+  const allowed = new Set(["image/jpeg", "image/png", "application/pdf"]);
+  if (!allowed.has(file.type)) {
+    throw Object.assign(new Error("unsupported file type"), { code: "FILE_TYPE_INVALID" });
+  }
+  if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
+    throw Object.assign(new Error("file too large"), { code: "FILE_TOO_LARGE" });
+  }
   const ext = safeUploadExtension(file);
   const path = `${folder}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabaseClient.storage
@@ -470,6 +444,12 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  if (!passkeyVerified) {
+    setStatus("Please complete device fingerprint/passkey verification before submitting.", "error");
+    document.getElementById("fingerprintBtn")?.focus();
+    return;
+  }
+
   const data = Object.fromEntries(new FormData(form).entries());
 
   // Save the typed fields now, before any upload starts, so this attempt
@@ -478,17 +458,23 @@ form.addEventListener("submit", async (e) => {
     formFields: {
       fullName: data.fullName, phone: data.phone, email: data.email,
       dob: data.dob, gender: data.gender, location: data.location,
+      bankAccountName: data.bankAccountName, bankAccountNumber: data.bankAccountNumber,
     },
   });
 
   submitBtn.disabled = true;
   submitBtn.textContent = HW_I18N.t("form.uploading");
 
+  const uploadedPaths = [];
   try {
     const photoPath = await getOrUploadPath("photo", "photos");
+    uploadedPaths.push(photoPath);
     const idFrontPath = await getOrUploadPath("idDocumentFront", "id-documents");
+    uploadedPaths.push(idFrontPath);
     const idBackPath = await getOrUploadPath("idDocumentBack", "id-documents");
+    uploadedPaths.push(idBackPath);
     const receiptPath = await getOrUploadPath("receipt", "receipts");
+    uploadedPaths.push(receiptPath);
 
     submitBtn.textContent = HW_I18N.t("form.submitting");
 
@@ -504,6 +490,8 @@ form.addEventListener("submit", async (e) => {
       date_of_birth: data.dob,
       gender: data.gender || null,
       location: data.location,
+      bank_account_name: data.bankAccountName,
+      bank_account_number: data.bankAccountNumber,
       photo_path: photoPath,
       id_document_front_path: idFrontPath,
       id_document_back_path: idBackPath,
@@ -518,8 +506,15 @@ form.addEventListener("submit", async (e) => {
     form.reset();
   } catch (err) {
     console.error(err);
+    const cleanupPaths = [...new Set(uploadedPaths.filter(Boolean))];
+    if (cleanupPaths.length) {
+      try { await supabaseClient.storage.from("registrations").remove(cleanupPaths); }
+      catch (cleanupErr) { console.error("Registration upload cleanup failed:", cleanupErr); }
+    }
     if (err && err.code === "FILE_TOO_LARGE") {
       setStatus(HW_I18N.t("status.fileTooLarge"), "error");
+    } else if (err && err.code === "FILE_TYPE_INVALID") {
+      setStatus("Unsupported file type. Please use JPG, PNG, or PDF.", "error");
     } else if (err && err.code === "23505") {
       // Postgres unique_violation — this phone number already has a registration.
       setStatus(HW_I18N.t("status.duplicatePhone"), "error");
