@@ -490,7 +490,7 @@ async function openDetail(row) {
       <div><span class="admin-modal-label">Date of birth</span>${escapeHtml(row.date_of_birth)}</div>
       <div><span class="admin-modal-label">Gender</span>${escapeHtml(row.gender) || "—"}</div>
       <div><span class="admin-modal-label">Location</span>${escapeHtml(row.location)}</div>
-      <div><span class="admin-modal-label">Bank name</span>${escapeHtml(row.bank_name) || "—"}</div>
+      <div><span class="admin-modal-label">Bank account name</span>${escapeHtml(row.bank_account_name) || "—"}</div>
       <div><span class="admin-modal-label">Bank account number</span>${escapeHtml(row.bank_account_number) || "—"}</div>
       <div><span class="admin-modal-label">Submitted</span>${formatDate(row.created_at)}</div>
     </div>
