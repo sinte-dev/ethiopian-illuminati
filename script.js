@@ -227,10 +227,35 @@ initResume();
 initLastRegistrationBanner();
 
 /* ---------- fingerprint press-and-hold verification ----------
-   This keeps the original visual fingerprint interaction: press and hold
-   until the progress completes. It is a client-side confirmation gesture,
-   not a real biometric fingerprint scan. Successful completion is required
-   before the registration form can be submitted. */
+   Visual press-and-hold confirmation only; not a real biometric scan. */
+
+const FINGERPRINT_HOLD_MS = 1200;
+
+function playFingerprintTone(verified) {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const notes = verified ? [660, 880] : [440];
+    let t = ctx.currentTime;
+    notes.forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.18);
+      t += 0.14;
+    });
+    setTimeout(() => ctx.close().catch(() => {}), (notes.length * 140) + 200);
+  } catch {
+    // Audio may be unavailable; visual verification still works.
+  }
+}
 
 let passkeyVerified = false;
 
