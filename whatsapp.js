@@ -4,9 +4,9 @@
   // Prevent duplicate buttons if this script is loaded more than once.
   if (document.getElementById("whatsapp-float")) return;
 
-  const number = (typeof WHATSAPP_NUMBER !== "undefined" && WHATSAPP_NUMBER)
-    ? String(WHATSAPP_NUMBER).replace(/\D/g, "")
-    : "251900000000";
+ const number = (typeof WHATSAPP_NUMBER !== "undefined" && WHATSAPP_NUMBER)
+  ? String(WHATSAPP_NUMBER).replace(/\D/g, "")
+  : "251900000000";
 
   const message = "Hello, I would like to get more information.";
 
