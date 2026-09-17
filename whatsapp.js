@@ -4,9 +4,31 @@
   // Prevent duplicate buttons if this script is loaded more than once.
   if (document.getElementById("whatsapp-float")) return;
 
- const number = (typeof WHATSAPP_NUMBER !== "undefined" && WHATSAPP_NUMBER)
-  ? String(WHATSAPP_NUMBER).replace(/\D/g, "")
-  : "251900000000";
+(async () => {
+  "use strict";
+
+  let number = "251900000000";
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/get-settings`, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+
+      const savedNumber = String(data.whatsapp_number || "")
+        .replace(/\D/g, "");
+
+      if (/^\d{8,15}$/.test(savedNumber)) {
+        number = savedNumber;
+      }
+    }
+  } catch (error) {
+    console.error("Could not load WhatsApp settings:", error);
+  }
 
   const message = "Hello, I would like to get more information.";
 
