@@ -4,32 +4,9 @@
   // Prevent duplicate buttons if this script is loaded more than once.
   if (document.getElementById("whatsapp-float")) return;
 
-(async () => {
-  "use strict";
-
+  // Keep the button working immediately with a safe fallback, then replace
+  // the number with the value saved in Supabase when it is available.
   let number = "251900000000";
-
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/get-settings`, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY
-      }
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-
-      const savedNumber = String(data.whatsapp_number || "")
-        .replace(/\D/g, "");
-
-      if (/^\d{8,15}$/.test(savedNumber)) {
-        number = savedNumber;
-      }
-    }
-  } catch (error) {
-    console.error("Could not load WhatsApp settings:", error);
-  }
-
   const message = "Hello, I would like to get more information.";
 
   const style = document.createElement("style");
@@ -75,7 +52,6 @@
 
   const link = document.createElement("a");
   link.id = "whatsapp-float";
-  link.href = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.setAttribute("aria-label", "Contact us on WhatsApp");
@@ -87,8 +63,13 @@
     </svg>
   `;
 
+  const updateLink = () => {
+    link.href = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+  };
+
   const mount = () => {
     if (!document.body || document.getElementById("whatsapp-float")) return;
+    updateLink();
     document.body.appendChild(link);
   };
 
@@ -97,4 +78,34 @@
   } else {
     mount();
   }
+
+  // Load the current WhatsApp number from the public Supabase settings
+  // endpoint. Failure does not remove or disable the button.
+  (async () => {
+    try {
+      if (typeof SUPABASE_URL === "undefined") return;
+
+      const headers = {};
+      if (typeof SUPABASE_ANON_KEY !== "undefined" && SUPABASE_ANON_KEY) {
+        headers.apikey = SUPABASE_ANON_KEY;
+      }
+
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/get-settings`,
+        { headers, cache: "no-store" }
+      );
+
+      if (!response.ok) throw new Error(`Settings request failed (${response.status})`);
+
+      const settings = await response.json();
+      const savedNumber = String(settings.whatsapp_number || "").replace(/\D/g, "");
+
+      if (/^\d{8,15}$/.test(savedNumber)) {
+        number = savedNumber;
+        updateLink();
+      }
+    } catch (error) {
+      console.warn("Could not load WhatsApp number from site settings; using fallback.", error);
+    }
+  })();
 })();
