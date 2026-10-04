@@ -755,12 +755,14 @@ cancelEditOpeningBtn.addEventListener("click", () => {
   openingFormStatus.className = "field-hint";
 });
 
-openingImageInput.addEventListener("change", () => {
-  const file = openingImageInput.files && openingImageInput.files[0];
-  if (!file) return;
-  openingImagePreview.src = URL.createObjectURL(file);
-  openingImagePreviewWrap.hidden = false;
-});
+const reader = new FileReader();
+
+reader.onload = function (e) {
+    openingImagePreview.src = e.target.result;
+    openingImagePreviewWrap.hidden = false;
+};
+
+reader.readAsDataURL(file);
 
 async function uploadOpeningImage(file) {
   const ext = safeUploadExtension(file);
