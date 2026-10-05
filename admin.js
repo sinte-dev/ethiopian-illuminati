@@ -746,8 +746,7 @@ function resetOpeningForm() {
   openingIdInput.value = "";
   openingActiveInput.checked = true;
   editingOpeningImageUrl = null;
-  openingImagePreviewWrap.hidden = true;
-  openingImagePreview.src = "";
+  clearOpeningImagePreview();
   saveOpeningBtn.textContent = "Add opening";
   cancelEditOpeningBtn.hidden = true;
 }
@@ -758,18 +757,64 @@ cancelEditOpeningBtn.addEventListener("click", () => {
   openingFormStatus.className = "field-hint";
 });
 
+let openingImageObjectUrl = null;
+
+function clearOpeningImagePreview() {
+  if (openingImageObjectUrl) {
+    URL.revokeObjectURL(openingImageObjectUrl);
+    openingImageObjectUrl = null;
+  }
+  openingImagePreview.removeAttribute("src");
+  openingImagePreviewWrap.hidden = true;
+}
+
+function showOpeningImagePreview(file) {
+  if (!file || !file.type || !file.type.startsWith("image/")) {
+    clearOpeningImagePreview();
+    return;
+  }
+
+  if (openingImageObjectUrl) {
+    URL.revokeObjectURL(openingImageObjectUrl);
+    openingImageObjectUrl = null;
+  }
+
+  // Use a temporary object URL instead of a data URL. This is more reliable
+  // on Android/mobile browsers and avoids large base64 previews.
+  try {
+    openingImageObjectUrl = URL.createObjectURL(file);
+    openingImagePreview.onload = () => {
+      openingImagePreviewWrap.hidden = false;
+    };
+    openingImagePreview.onerror = () => {
+      // Some mobile browsers can select an image format they cannot preview.
+      clearOpeningImagePreview();
+      openingFormStatus.textContent = "The selected image cannot be previewed here, but you can still try uploading it.";
+      openingFormStatus.className = "field-hint";
+    };
+    openingImagePreview.src = openingImageObjectUrl;
+    openingImagePreviewWrap.hidden = false;
+  } catch (error) {
+    // Fallback for browsers where createObjectURL is unavailable.
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      openingImagePreview.src = e.target.result;
+      openingImagePreviewWrap.hidden = false;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
 openingImageInput.addEventListener("change", () => {
   const file = openingImageInput.files && openingImageInput.files[0];
-  if (!file) return;
+  if (!file) {
+    clearOpeningImagePreview();
+    return;
+  }
 
-  const reader = new FileReader();
-
-  reader.onload = (e) => {
-    openingImagePreview.src = e.target.result;
-    openingImagePreviewWrap.hidden = false;
-  };
-
-  reader.readAsDataURL(file);
+  openingFormStatus.textContent = "";
+  openingFormStatus.className = "field-hint";
+  showOpeningImagePreview(file);
 });
 
 async function uploadOpeningImage(file) {
