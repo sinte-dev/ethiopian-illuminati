@@ -24,17 +24,22 @@ function render() {
 
   statusEl.textContent = "";
   grid.innerHTML = filtered
-    .map((o) => {
-      return `
+    .map((o) => `
     <div class="opening-card" data-id="${o.id}">
       ${o.image_url
         ? `<img class="opening-image" src="${escapeHtml(o.image_url)}" alt="${escapeHtml(o.title)}">`
         : `<div class="opening-image opening-image-placeholder"></div>`}
       <div class="opening-card-body">
         <h3 class="opening-title">${escapeHtml(o.title)}</h3>
-        <div class="opening-detail always-visible">
-          ${o.description ? `<p class="opening-desc">${escapeHtml(o.description)}</p>` : ""}
-        </div>
+        ${o.description ? `
+          <div class="opening-description">
+            ${String(o.description)
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line) => `<div class="opening-description-line">${escapeHtml(line)}</div>`)
+              .join("")}
+          </div>` : ""}
         <div class="opening-receipt">
           <input type="file" accept="image/*,application/pdf" class="opening-receipt-input" data-id="${o.id}" id="receiptInput-${o.id}" hidden>
           ${receiptUploadedIds.has(o.id)
@@ -44,16 +49,9 @@ function render() {
         </div>
       </div>
     </div>
-  `;
-    })
+  `)
     .join("");
-
-  // Re-translate any freshly injected data-i18n elements (e.g. the "View details" toggle).
-  grid.querySelectorAll("[data-i18n]").forEach((el) => {
-    el.textContent = HW_I18N.t(el.getAttribute("data-i18n"));
-  });
 }
-
 
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024; // 5MB
 
