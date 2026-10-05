@@ -795,6 +795,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   transition: max-height 0.25s ease, opacity 0.2s ease;
 }
 .opening-card.expanded .opening-detail{ max-height: 400px; opacity: 1; margin: 4px 0; }
+/* Opening descriptions are shown directly; no "View details" button is needed. */
+.opening-detail.always-visible{ max-height: none; opacity: 1; margin: 4px 0; }
+
 .opening-desc{ font-size: 1.05rem; line-height: 1.8; color: var(--slate); margin: 0 0 8px; }
 .opening-posted{ font-size: 0.85rem; color: var(--muted); margin: 0; }
 .opening-actions{
