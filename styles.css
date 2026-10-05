@@ -955,8 +955,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .admin-opening-thumb-empty{ border: 1px dashed var(--line); }
 .form-row--checkbox label{ display: flex; align-items: center; gap: 8px; font-weight: 500; }
 .form-row--checkbox input[type="checkbox"]{ width: 16px; height: 16px; }
-.opening-image-preview-wrap{ margin-top: 8px; }
-.opening-image-preview{ width: 200px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.opening-image-preview-wrap{
+  margin-top: 8px;
+  width: min(100%, 300px);
+  overflow: hidden;
+  border-radius: 8px;
+}
+.opening-image-preview{
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--cream);
+}
 #openingFormStatus{ display: block; margin-top: 10px; }
 
 /* register.html — extracted inline styles */
@@ -1466,6 +1481,34 @@ button, input, select, textarea {
 
   .admin-modal-overlay {
     padding: 24px 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-openings-card {
+    padding: 18px 14px;
+  }
+
+  .admin-openings-card .form-row input[type="text"],
+  .admin-openings-card .form-row textarea,
+  .admin-openings-card .form-row input[type="file"] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .opening-image-preview-wrap {
+    width: min(100%, 280px);
+  }
+
+  .opening-image-preview {
+    max-width: 100%;
+    max-height: 220px;
+  }
+
+  .admin-opening-actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 }
 
