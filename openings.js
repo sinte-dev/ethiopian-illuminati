@@ -9,7 +9,6 @@ const openingsGateMessage = document.getElementById("openingsGateMessage");
 const openingsContent = document.getElementById("openingsContent");
 
 let allOpenings = [];
-const expandedOpeningIds = new Set();
 const receiptUploadedIds = new Set(); // openings this session has already uploaded a receipt for
 let applicantToken = null; // set once the access-gate token is verified
 
@@ -26,19 +25,15 @@ function render() {
   statusEl.textContent = "";
   grid.innerHTML = filtered
     .map((o) => {
-      const expanded = expandedOpeningIds.has(o.id);
       return `
-    <div class="opening-card${expanded ? " expanded" : ""}" data-id="${o.id}">
+    <div class="opening-card" data-id="${o.id}">
       ${o.image_url
         ? `<img class="opening-image" src="${escapeHtml(o.image_url)}" alt="${escapeHtml(o.title)}">`
         : `<div class="opening-image opening-image-placeholder"></div>`}
       <div class="opening-card-body">
         <h3 class="opening-title">${escapeHtml(o.title)}</h3>
-        <div class="opening-detail">
+        <div class="opening-detail always-visible">
           ${o.description ? `<p class="opening-desc">${escapeHtml(o.description)}</p>` : ""}
-        </div>
-        <div class="opening-actions">
-          <button type="button" class="opening-toggle" data-id="${o.id}">${escapeHtml(HW_I18N.t(expanded ? "openings.hideDetails" : "openings.viewDetails"))}</button>
         </div>
         <div class="opening-receipt">
           <input type="file" accept="image/*,application/pdf" class="opening-receipt-input" data-id="${o.id}" id="receiptInput-${o.id}" hidden>
@@ -59,13 +54,6 @@ function render() {
   });
 }
 
-grid.addEventListener("click", (e) => {
-  if (!e.target.classList.contains("opening-toggle")) return;
-  const id = e.target.dataset.id;
-  if (expandedOpeningIds.has(id)) expandedOpeningIds.delete(id);
-  else expandedOpeningIds.add(id);
-  render();
-});
 
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024; // 5MB
 
