@@ -204,7 +204,10 @@ async function loadRegistrations() {
     query = query.eq("status", "rejected");
   }
 
-  const term = searchInput.value.trim();
+  // Strip characters that have special meaning inside a PostgREST .or()
+  // filter string (commas, parentheses, wildcards, backslashes) so a search
+  // like "Smith, John" can't break or alter the query.
+  const term = searchInput.value.trim().replace(/[,()%*\\]/g, " ").trim();
   if (term) query = query.or(`full_name.ilike.%${term}%,phone.ilike.%${term}%`);
 
   const { data, error } = await query;
@@ -754,6 +757,7 @@ cancelEditOpeningBtn.addEventListener("click", () => {
   openingFormStatus.textContent = "";
   openingFormStatus.className = "field-hint";
 });
+
 openingImageInput.addEventListener("change", () => {
   const file = openingImageInput.files && openingImageInput.files[0];
   if (!file) return;
@@ -767,8 +771,6 @@ openingImageInput.addEventListener("change", () => {
 
   reader.readAsDataURL(file);
 });
-
-reader.readAsDataURL(file);
 
 async function uploadOpeningImage(file) {
   const ext = safeUploadExtension(file);
