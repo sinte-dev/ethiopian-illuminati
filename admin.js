@@ -769,7 +769,7 @@ function clearOpeningImagePreview() {
 }
 
 function showOpeningImagePreview(file) {
-  if (!file || !file.type || !file.type.startsWith("image/")) {
+  if (!file) {
     clearOpeningImagePreview();
     return;
   }
@@ -779,30 +779,35 @@ function showOpeningImagePreview(file) {
     openingImageObjectUrl = null;
   }
 
-  // Use a temporary object URL instead of a data URL. This is more reliable
-  // on Android/mobile browsers and avoids large base64 previews.
-  try {
-    openingImageObjectUrl = URL.createObjectURL(file);
+  // Read the selected file directly. This is reliable on Android/iPhone
+  // browsers and makes the image visible immediately after selection.
+  const reader = new FileReader();
+  reader.onload = (event) => {
     openingImagePreview.onload = () => {
       openingImagePreviewWrap.hidden = false;
     };
     openingImagePreview.onerror = () => {
-      // Some mobile browsers can select an image format they cannot preview.
-      clearOpeningImagePreview();
-      openingFormStatus.textContent = "The selected image cannot be previewed here, but you can still try uploading it.";
-      openingFormStatus.className = "field-hint";
+      openingImagePreviewWrap.hidden = true;
+      openingFormStatus.textContent = "This image format cannot be previewed by your browser.";
+      openingFormStatus.className = "field-hint error";
     };
-    openingImagePreview.src = openingImageObjectUrl;
+    openingImagePreview.src = event.target.result;
+    // Show the preview immediately; onload will confirm it decoded.
     openingImagePreviewWrap.hidden = false;
-  } catch (error) {
-    // Fallback for browsers where createObjectURL is unavailable.
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      openingImagePreview.src = e.target.result;
+  };
+  reader.onerror = () => {
+    // Fallback to an object URL for browsers that cannot read the file as a data URL.
+    try {
+      openingImageObjectUrl = URL.createObjectURL(file);
+      openingImagePreview.src = openingImageObjectUrl;
       openingImagePreviewWrap.hidden = false;
-    };
-    reader.readAsDataURL(file);
-  }
+    } catch (error) {
+      openingImagePreviewWrap.hidden = true;
+      openingFormStatus.textContent = "Could not preview this image. Please choose a JPG or PNG image.";
+      openingFormStatus.className = "field-hint error";
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 openingImageInput.addEventListener("change", () => {
